@@ -15,15 +15,14 @@ import inspect
 from flask import Markup, current_app, flash, request
 from flask_login import current_user
 from flask_wtf import FlaskForm as BaseForm
-from speaklater import make_lazy_gettext
+from flask_babel import lazy_gettext
 from wtforms import BooleanField, Field, HiddenField, PasswordField, \
     StringField, SubmitField, ValidationError, validators
 
 from .confirmable import requires_confirmation
 from .utils import _, _datastore, config_value, get_message, hash_password, \
-    localize_callback, url_for_security, validate_redirect_url
+    url_for_security, validate_redirect_url
 
-lazy_gettext = make_lazy_gettext(lambda: localize_callback)
 
 _default_field_labels = {
     'email': _('Email Address'),

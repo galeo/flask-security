@@ -22,6 +22,7 @@ from flask_login import login_user as _login_user
 from flask_login import logout_user as _logout_user
 from flask_mail import Message
 from flask_principal import AnonymousIdentity, Identity, identity_changed
+from flask_babel import gettext
 from itsdangerous import BadSignature, SignatureExpired
 from werkzeug.local import LocalProxy
 
@@ -42,8 +43,6 @@ _datastore = LocalProxy(lambda: _security.datastore)
 _pwd_context = LocalProxy(lambda: _security.pwd_context)
 
 _hashing_context = LocalProxy(lambda: _security.hashing_context)
-
-localize_callback = LocalProxy(lambda: _security.i18n_domain.gettext)
 
 PY3 = sys.version_info[0] == 3
 
@@ -330,7 +329,7 @@ def get_config(app):
 
 def get_message(key, **kwargs):
     rv = config_value('MSG_' + key)
-    return localize_callback(rv[0], **kwargs), rv[1]
+    return gettext(rv[0], **kwargs), rv[1]
 
 
 def config_value(key, app=None, default=None):

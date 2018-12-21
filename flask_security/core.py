@@ -15,7 +15,7 @@ from datetime import datetime
 
 import pkg_resources
 from flask import current_app, render_template
-from flask_babelex import Domain
+from flask_babel import gettext
 from flask_login import AnonymousUserMixin, LoginManager
 from flask_login import UserMixin as BaseUserMixin
 from flask_login import current_user
@@ -31,7 +31,7 @@ from .forms import ChangePasswordForm, ConfirmRegisterForm, \
     ResetPasswordForm, SendConfirmationForm
 from .utils import _
 from .utils import config_value as cv
-from .utils import get_config, hash_data, localize_callback, send_mail, \
+from .utils import get_config, hash_data, send_mail, \
     string_types, url_for_security, verify_and_update_password, verify_hash
 from .views import create_blueprint
 
@@ -275,7 +275,6 @@ def _on_identity_loaded(sender, identity):
 def _get_login_manager(app, anonymous_user):
     lm = LoginManager()
     lm.anonymous_user = anonymous_user or AnonymousUser
-    lm.localize_callback = localize_callback
     lm.login_view = '%s.login' % cv('BLUEPRINT_NAME', app=app)
     lm.user_loader(_user_loader)
     lm.request_loader(_request_loader)
@@ -313,13 +312,6 @@ def _get_pwd_context(app):
         deprecated=deprecated)
 
 
-def _get_i18n_domain(app):
-    return Domain(
-        dirname=cv('I18N_DIRNAME', app=app),
-        domain=cv('I18N_DOMAIN', app=app)
-    )
-
-
 def _get_hashing_context(app):
     schemes = cv('HASHING_SCHEMES', app=app)
     deprecated = cv('DEPRECATED_HASHING_SCHEMES', app=app)
@@ -344,7 +336,6 @@ def _get_state(app, datastore, anonymous_user=None, **kwargs):
         principal=_get_principal(app),
         pwd_context=_get_pwd_context(app),
         hashing_context=_get_hashing_context(app),
-        i18n_domain=_get_i18n_domain(app),
         remember_token_serializer=_get_serializer(app, 'remember'),
         login_serializer=_get_serializer(app, 'login'),
         reset_serializer=_get_serializer(app, 'reset'),
@@ -541,10 +532,16 @@ class Security(object):
             app.register_blueprint(create_blueprint(state, __name__))
             app.context_processor(_context_processor)
 
+        # i18n
+        babel_translations = app.config.get('BABEL_TRANSLATIONS') or []
+        babel_translations.append(
+            (_default_config['I18N_DIRNAME'], _default_config['I18N_DOMAIN']))
+        app.config['BABEL_TRANSLATIONS'] = babel_translations
+
         @app.before_first_request
         def _register_i18n():
             if '_' not in app.jinja_env.globals:
-                app.jinja_env.globals['_'] = state.i18n_domain.gettext
+                app.jinja_env.globals['_'] = gettext
 
         state.render_template = self.render_template
         state.send_mail = self.send_mail
