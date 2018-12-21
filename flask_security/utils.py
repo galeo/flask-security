@@ -30,6 +30,7 @@ from flask_login import current_user
 from flask_login import COOKIE_NAME as REMEMBER_COOKIE_NAME
 from flask_mail import Message
 from flask_principal import AnonymousIdentity, Identity, identity_changed, Need
+from flask_babel import gettext
 from flask_wtf import csrf
 from wtforms import validators, ValidationError
 from itsdangerous import BadSignature, SignatureExpired
@@ -58,8 +59,6 @@ _datastore = LocalProxy(lambda: _security.datastore)
 _pwd_context = LocalProxy(lambda: _security.pwd_context)
 
 _hashing_context = LocalProxy(lambda: _security.hashing_context)
-
-localize_callback = LocalProxy(lambda: _security.i18n_domain.gettext)
 
 PY3 = sys.version_info[0] == 3
 
@@ -520,7 +519,7 @@ def get_config(app):
 
 def get_message(key, **kwargs):
     rv = config_value("MSG_" + key)
-    return localize_callback(rv[0], **kwargs), rv[1]
+    return gettext(rv[0], **kwargs), rv[1]
 
 
 def config_value(key, app=None, default=None):

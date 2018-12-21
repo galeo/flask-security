@@ -19,7 +19,7 @@ import sys
 
 import pkg_resources
 from flask import _request_ctx_stack, current_app, render_template
-from flask_babelex import Domain
+from flask_babel import gettext
 from flask_login import AnonymousUserMixin, LoginManager
 from flask_login import UserMixin as BaseUserMixin
 from flask_login import current_user
@@ -69,7 +69,6 @@ from .utils import (
     get_identity_attributes,
     get_message,
     hash_data,
-    localize_callback,
     send_mail,
     string_types,
     uia_email_mapper,
@@ -517,7 +516,6 @@ def _on_identity_loaded(sender, identity):
 def _get_login_manager(app, anonymous_user):
     lm = LoginManager()
     lm.anonymous_user = anonymous_user or AnonymousUser
-    lm.localize_callback = localize_callback
     lm.login_view = "%s.login" % cv("BLUEPRINT_NAME", app=app)
     lm.user_loader(_user_loader)
     lm.request_loader(_request_loader)
@@ -560,12 +558,6 @@ def _get_pwd_context(app):
     return cc
 
 
-def _get_i18n_domain(app):
-    return Domain(
-        dirname=cv("I18N_DIRNAME", app=app), domain=cv("I18N_DOMAIN", app=app)
-    )
-
-
 def _get_hashing_context(app):
     schemes = cv("HASHING_SCHEMES", app=app)
     deprecated = cv("DEPRECATED_HASHING_SCHEMES", app=app)
@@ -589,7 +581,6 @@ def _get_state(app, datastore, anonymous_user=None, **kwargs):
             principal=_get_principal(app),
             pwd_context=_get_pwd_context(app),
             hashing_context=_get_hashing_context(app),
-            i18n_domain=_get_i18n_domain(app),
             remember_token_serializer=_get_serializer(app, "remember"),
             login_serializer=_get_serializer(app, "login"),
             reset_serializer=_get_serializer(app, "reset"),
@@ -1098,14 +1089,20 @@ class Security(object):
             app.register_blueprint(bp)
             app.context_processor(_context_processor)
 
+        # i18n
+        babel_translations = app.config.get('BABEL_TRANSLATIONS') or []
+        babel_translations.append(
+            (_default_config['I18N_DIRNAME'], _default_config['I18N_DOMAIN']))
+        app.config['BABEL_TRANSLATIONS'] = babel_translations
+
         @app.before_first_request
         def _register_i18n():
             # N.B. as of jinja 2.9 '_' is always registered
             # http://jinja.pocoo.org/docs/2.10/extensions/#i18n-extension
             if "_" not in app.jinja_env.globals:
-                current_app.jinja_env.globals["_"] = state.i18n_domain.gettext
+                current_app.jinja_env.globals["_"] = gettext
             # Register so other packages can reference our translations.
-            current_app.jinja_env.globals["_fsdomain"] = state.i18n_domain.gettext
+            current_app.jinja_env.globals["_fsdomain"] = gettext
 
         @app.before_first_request
         def _csrf_init():
